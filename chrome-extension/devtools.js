@@ -744,6 +744,348 @@ let reconnectAfterValidation = false;
 // Track if we're intentionally closing the connection
 let intentionalClosure = false;
 
+// Helper function to execute element interaction commands
+function executeElementInteraction(message) {
+  let script = "";
+  
+  switch (message.type) {
+    case "click-element":
+      if (message.selector) {
+        script = `
+          (function() {
+            try {
+              const element = document.querySelector('${message.selector}');
+              if (!element) {
+                return { success: false, error: 'Element not found: ${message.selector}' };
+              }
+              element.click();
+              return { success: true, message: 'Element clicked successfully' };
+            } catch (error) {
+              return { success: false, error: 'Click failed: ' + error.message };
+            }
+          })()
+        `;
+      } else if (message.x !== undefined && message.y !== undefined) {
+        script = `
+          (function() {
+            try {
+              const element = document.elementFromPoint(${message.x}, ${message.y});
+              if (!element) {
+                return { success: false, error: 'No element found at coordinates (${message.x}, ${message.y})' };
+              }
+              element.click();
+              return { success: true, message: 'Element clicked at coordinates (${message.x}, ${message.y})' };
+            } catch (error) {
+              return { success: false, error: 'Click failed: ' + error.message };
+            }
+          })()
+        `;
+      }
+      break;
+      
+    case "input-text":
+      script = `
+        (function() {
+          try {
+            const element = document.querySelector('${message.selector}');
+            if (!element) {
+              return { success: false, error: 'Element not found: ${message.selector}' };
+            }
+            if (${message.clearFirst !== false}) {
+              element.value = '';
+            }
+            element.value = '${message.text.replace(/'/g, "\\'")}';
+            element.dispatchEvent(new Event('input', { bubbles: true }));
+            element.dispatchEvent(new Event('change', { bubbles: true }));
+            return { success: true, message: 'Text input successfully' };
+          } catch (error) {
+            return { success: false, error: 'Input failed: ' + error.message };
+          }
+        })()
+      `;
+      break;
+      
+    case "select-dropdown":
+      script = `
+        (function() {
+          try {
+            const element = document.querySelector('${message.selector}');
+            if (!element) {
+              return { success: false, error: 'Element not found: ${message.selector}' };
+            }
+            if (element.tagName.toLowerCase() !== 'select') {
+              return { success: false, error: 'Element is not a select dropdown' };
+            }
+            
+            const options = Array.from(element.options);
+            let targetOption;
+            
+            if (${message.byValue === true}) {
+              targetOption = options.find(opt => opt.value === '${message.option}');
+            } else {
+              targetOption = options.find(opt => opt.text === '${message.option}');
+            }
+            
+            if (!targetOption) {
+              return { success: false, error: 'Option not found: ${message.option}' };
+            }
+            
+            element.value = targetOption.value;
+            element.dispatchEvent(new Event('change', { bubbles: true }));
+            return { success: true, message: 'Dropdown option selected successfully' };
+          } catch (error) {
+            return { success: false, error: 'Select failed: ' + error.message };
+          }
+        })()
+      `;
+      break;
+      
+    case "hover-element":
+      script = `
+        (function() {
+          try {
+            const element = document.querySelector('${message.selector}');
+            if (!element) {
+              return { success: false, error: 'Element not found: ${message.selector}' };
+            }
+            const event = new MouseEvent('mouseover', {
+              view: window,
+              bubbles: true,
+              cancelable: true
+            });
+            element.dispatchEvent(event);
+            return { success: true, message: 'Element hovered successfully' };
+          } catch (error) {
+            return { success: false, error: 'Hover failed: ' + error.message };
+          }
+        })()
+      `;
+      break;
+      
+    case "scroll-to-element":
+      script = `
+        (function() {
+          try {
+            const element = document.querySelector('${message.selector}');
+            if (!element) {
+              return { success: false, error: 'Element not found: ${message.selector}' };
+            }
+            element.scrollIntoView({
+              behavior: '${message.behavior || 'smooth'}',
+              block: '${message.block || 'start'}',
+              inline: '${message.inline || 'nearest'}'
+            });
+            return { success: true, message: 'Scrolled to element successfully' };
+          } catch (error) {
+            return { success: false, error: 'Scroll failed: ' + error.message };
+          }
+        })()
+      `;
+      break;
+      
+    case "wait-for-element":
+      script = `
+        (function() {
+          return new Promise((resolve) => {
+            const selector = '${message.selector}';
+            const timeout = ${message.timeout || 10000};
+            const checkVisible = ${message.visible !== false};
+            const startTime = Date.now();
+            
+            function checkElement() {
+              const element = document.querySelector(selector);
+              if (element && (!checkVisible || element.offsetParent !== null)) {
+                resolve({ success: true, message: 'Element found successfully' });
+                return;
+              }
+              
+              if (Date.now() - startTime > timeout) {
+                resolve({ success: false, error: 'Element not found within timeout: ' + selector });
+                return;
+              }
+              
+              setTimeout(checkElement, 100);
+            }
+            
+            checkElement();
+          });
+        })()
+      `;
+      break;
+      
+    case "drag-and-drop":
+      script = `
+        (function() {
+          try {
+            const sourceElement = document.querySelector('${message.sourceSelector}');
+            const targetElement = document.querySelector('${message.targetSelector}');
+            
+            if (!sourceElement) {
+              return { success: false, error: 'Source element not found: ${message.sourceSelector}' };
+            }
+            if (!targetElement) {
+              return { success: false, error: 'Target element not found: ${message.targetSelector}' };
+            }
+            
+            const sourceRect = sourceElement.getBoundingClientRect();
+            const targetRect = targetElement.getBoundingClientRect();
+            
+            const sourceX = ${message.sourceX !== undefined ? message.sourceX : 'sourceRect.left + sourceRect.width / 2'};
+            const sourceY = ${message.sourceY !== undefined ? message.sourceY : 'sourceRect.top + sourceRect.height / 2'};
+            const targetX = ${message.targetX !== undefined ? message.targetX : 'targetRect.left + targetRect.width / 2'};
+            const targetY = ${message.targetY !== undefined ? message.targetY : 'targetRect.top + targetRect.height / 2'};
+            
+            // Create and dispatch drag events
+            const dragStartEvent = new DragEvent('dragstart', {
+              bubbles: true,
+              cancelable: true,
+              clientX: sourceX,
+              clientY: sourceY
+            });
+            
+            const dragOverEvent = new DragEvent('dragover', {
+              bubbles: true,
+              cancelable: true,
+              clientX: targetX,
+              clientY: targetY
+            });
+            
+            const dropEvent = new DragEvent('drop', {
+              bubbles: true,
+              cancelable: true,
+              clientX: targetX,
+              clientY: targetY
+            });
+            
+            sourceElement.dispatchEvent(dragStartEvent);
+            targetElement.dispatchEvent(dragOverEvent);
+            targetElement.dispatchEvent(dropEvent);
+            
+            return { success: true, message: 'Drag and drop completed successfully' };
+          } catch (error) {
+            return { success: false, error: 'Drag and drop failed: ' + error.message };
+          }
+        })()
+      `;
+      break;
+      
+    case "upload-file":
+      // File upload is more complex and typically requires native file system access
+      // For now, we'll indicate this is not supported in content script
+      script = `
+        (function() {
+          return { success: false, error: 'File upload not supported in content script - use native Chrome extension APIs' };
+        })()
+      `;
+      break;
+  }
+  
+  if (script) {
+    // Execute the script in the inspected window
+    chrome.devtools.inspectedWindow.eval(script, (result, isException) => {
+      if (isException) {
+        console.error('Script execution failed:', isException);
+        sendCommandResponse(message, false, 'Script execution failed: ' + (isException.description || 'Unknown error'));
+      } else {
+        console.log('Script execution result:', result);
+        if (result && typeof result === 'object' && result.success !== undefined) {
+          sendCommandResponse(message, result.success, result.success ? result.message : result.error);
+        } else {
+          sendCommandResponse(message, true, 'Command executed successfully');
+        }
+      }
+    });
+  } else {
+    sendCommandResponse(message, false, 'Unknown command type: ' + message.type);
+  }
+}
+
+// Helper function to execute navigation commands
+function executeNavigationCommand(message) {
+  switch (message.type) {
+    case "navigate-to-url":
+      if (!message.url) {
+        sendCommandResponse(message, false, 'URL is required for navigation');
+        return;
+      }
+      
+      // Use chrome.tabs API to navigate
+      chrome.tabs.update(chrome.devtools.inspectedWindow.tabId, {
+        url: message.url
+      }, (tab) => {
+        if (chrome.runtime.lastError) {
+          sendCommandResponse(message, false, 'Navigation failed: ' + chrome.runtime.lastError.message);
+        } else {
+          sendCommandResponse(message, true, 'Navigation initiated to: ' + message.url);
+        }
+      });
+      break;
+      
+    case "navigate-back":
+      const backScript = `
+        (function() {
+          try {
+            window.history.back();
+            return { success: true, message: 'Navigated back successfully' };
+          } catch (error) {
+            return { success: false, error: 'Navigate back failed: ' + error.message };
+          }
+        })()
+      `;
+      
+      chrome.devtools.inspectedWindow.eval(backScript, (result, isException) => {
+        if (isException) {
+          sendCommandResponse(message, false, 'Navigate back failed: ' + (isException.description || 'Unknown error'));
+        } else {
+          sendCommandResponse(message, result.success, result.success ? result.message : result.error);
+        }
+      });
+      break;
+      
+    case "navigate-forward":
+      const forwardScript = `
+        (function() {
+          try {
+            window.history.forward();
+            return { success: true, message: 'Navigated forward successfully' };
+          } catch (error) {
+            return { success: false, error: 'Navigate forward failed: ' + error.message };
+          }
+        })()
+      `;
+      
+      chrome.devtools.inspectedWindow.eval(forwardScript, (result, isException) => {
+        if (isException) {
+          sendCommandResponse(message, false, 'Navigate forward failed: ' + (isException.description || 'Unknown error'));
+        } else {
+          sendCommandResponse(message, result.success, result.success ? result.message : result.error);
+        }
+      });
+      break;
+      
+    default:
+      sendCommandResponse(message, false, 'Unknown navigation command: ' + message.type);
+  }
+}
+
+// Helper function to send command response back to server
+function sendCommandResponse(originalMessage, success, message) {
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    const response = {
+      type: originalMessage.type + '-response',
+      requestId: originalMessage.requestId,
+      success: success,
+      message: message,
+      timestamp: Date.now()
+    };
+    
+    console.log('Sending command response:', response);
+    ws.send(JSON.stringify(response));
+  } else {
+    console.error('Cannot send command response - WebSocket not connected');
+  }
+}
+
 // Function to send a heartbeat to keep the WebSocket connection alive
 function sendHeartbeat() {
   if (ws && ws.readyState === WebSocket.OPEN) {
@@ -1094,6 +1436,39 @@ async function setupWebSocket() {
           };
 
           requestCurrentUrl();
+        } else if (message.type === "click-element") {
+          console.log("Chrome Extension: Click element command received", message);
+          executeElementInteraction(message);
+        } else if (message.type === "input-text") {
+          console.log("Chrome Extension: Input text command received", message);
+          executeElementInteraction(message);
+        } else if (message.type === "select-dropdown") {
+          console.log("Chrome Extension: Select dropdown command received", message);
+          executeElementInteraction(message);
+        } else if (message.type === "upload-file") {
+          console.log("Chrome Extension: Upload file command received", message);
+          executeElementInteraction(message);
+        } else if (message.type === "hover-element") {
+          console.log("Chrome Extension: Hover element command received", message);
+          executeElementInteraction(message);
+        } else if (message.type === "drag-and-drop") {
+          console.log("Chrome Extension: Drag and drop command received", message);
+          executeElementInteraction(message);
+        } else if (message.type === "navigate-to-url") {
+          console.log("Chrome Extension: Navigate to URL command received", message);
+          executeNavigationCommand(message);
+        } else if (message.type === "navigate-back") {
+          console.log("Chrome Extension: Navigate back command received", message);
+          executeNavigationCommand(message);
+        } else if (message.type === "navigate-forward") {
+          console.log("Chrome Extension: Navigate forward command received", message);
+          executeNavigationCommand(message);
+        } else if (message.type === "scroll-to-element") {
+          console.log("Chrome Extension: Scroll to element command received", message);
+          executeElementInteraction(message);
+        } else if (message.type === "wait-for-element") {
+          console.log("Chrome Extension: Wait for element command received", message);
+          executeElementInteraction(message);
         }
       } catch (error) {
         console.error(

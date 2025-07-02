@@ -2,6 +2,7 @@
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { z } from "zod";
 import path from "path";
 import fs from "fs";
 
@@ -1356,6 +1357,626 @@ server.tool(
 );
 
 // Add tool for Best Practices audits, launches a headless browser instance
+// Direct Element Interaction Tools
+server.tool(
+  "clickElement",
+  "Click on an element by CSS selector or coordinates",
+  {
+    selector: z.string().optional().describe("CSS selector for the element to click"),
+    x: z.number().optional().describe("X coordinate for click position"),
+    y: z.number().optional().describe("Y coordinate for click position")
+  },
+  async (args) => {
+    return await withServerConnection(async () => {
+      try {
+        const response = await fetch(
+          `http://${discoveredHost}:${discoveredPort}/click-element`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(args),
+          }
+        );
+
+        const result = await response.json();
+
+        if (response.ok) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: result.message || "Element clicked successfully",
+              },
+            ],
+          };
+        } else {
+          return {
+            content: [
+              {
+                type: "text",
+                text: `Error clicking element: ${result.error}`,
+              },
+            ],
+          };
+        }
+      } catch (error: any) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Failed to click element: ${error.message}`,
+            },
+          ],
+        };
+      }
+    });
+  }
+);
+
+server.tool(
+  "inputText",
+  "Type text into form fields",
+  {
+    selector: z.string().describe("CSS selector for the input element"),
+    text: z.string().describe("Text to input into the field"),
+    clearFirst: z.boolean().optional().default(true).describe("Whether to clear the field before typing")
+  },
+  async (args) => {
+    return await withServerConnection(async () => {
+      try {
+        const response = await fetch(
+          `http://${discoveredHost}:${discoveredPort}/input-text`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(args),
+          }
+        );
+
+        const result = await response.json();
+
+        if (response.ok) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: result.message || "Text input successfully",
+              },
+            ],
+          };
+        } else {
+          return {
+            content: [
+              {
+                type: "text",
+                text: `Error inputting text: ${result.error}`,
+              },
+            ],
+          };
+        }
+      } catch (error: any) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Failed to input text: ${error.message}`,
+            },
+          ],
+        };
+      }
+    });
+  }
+);
+
+server.tool(
+  "selectDropdownOption",
+  "Select option from dropdown",
+  {
+    selector: z.string().describe("CSS selector for the dropdown element"),
+    option: z.string().describe("Option value or text to select"),
+    byValue: z.boolean().optional().default(false).describe("Whether to select by value (true) or text (false)")
+  },
+  async (args) => {
+    return await withServerConnection(async () => {
+      try {
+        const response = await fetch(
+          `http://${discoveredHost}:${discoveredPort}/select-dropdown`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(args),
+          }
+        );
+
+        const result = await response.json();
+
+        if (response.ok) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: result.message || "Dropdown option selected successfully",
+              },
+            ],
+          };
+        } else {
+          return {
+            content: [
+              {
+                type: "text",
+                text: `Error selecting dropdown option: ${result.error}`,
+              },
+            ],
+          };
+        }
+      } catch (error: any) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Failed to select dropdown option: ${error.message}`,
+            },
+          ],
+        };
+      }
+    });
+  }
+);
+
+server.tool(
+  "uploadFile",
+  "Upload file to input element",
+  {
+    selector: z.string().describe("CSS selector for the file input element"),
+    filePath: z.string().describe("Path to the file to upload")
+  },
+  async (args) => {
+    return await withServerConnection(async () => {
+      try {
+        const response = await fetch(
+          `http://${discoveredHost}:${discoveredPort}/upload-file`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(args),
+          }
+        );
+
+        const result = await response.json();
+
+        if (response.ok) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: result.message || "File uploaded successfully",
+              },
+            ],
+          };
+        } else {
+          return {
+            content: [
+              {
+                type: "text",
+                text: `Error uploading file: ${result.error}`,
+              },
+            ],
+          };
+        }
+      } catch (error: any) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Failed to upload file: ${error.message}`,
+            },
+          ],
+        };
+      }
+    });
+  }
+);
+
+server.tool(
+  "hoverElement",
+  "Mouse hover interactions",
+  {
+    selector: z.string().describe("CSS selector for the element to hover")
+  },
+  async (args) => {
+    return await withServerConnection(async () => {
+      try {
+        const response = await fetch(
+          `http://${discoveredHost}:${discoveredPort}/hover-element`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(args),
+          }
+        );
+
+        const result = await response.json();
+
+        if (response.ok) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: result.message || "Element hovered successfully",
+              },
+            ],
+          };
+        } else {
+          return {
+            content: [
+              {
+                type: "text",
+                text: `Error hovering element: ${result.error}`,
+              },
+            ],
+          };
+        }
+      } catch (error: any) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Failed to hover element: ${error.message}`,
+            },
+          ],
+        };
+      }
+    });
+  }
+);
+
+server.tool(
+  "dragAndDrop",
+  "Drag elements between positions",
+  {
+    sourceSelector: z.string().describe("CSS selector for the source element to drag"),
+    targetSelector: z.string().describe("CSS selector for the target element to drop to"),
+    sourceX: z.number().optional().describe("X coordinate for drag start position"),
+    sourceY: z.number().optional().describe("Y coordinate for drag start position"),
+    targetX: z.number().optional().describe("X coordinate for drop position"),
+    targetY: z.number().optional().describe("Y coordinate for drop position")
+  },
+  async (args) => {
+    return await withServerConnection(async () => {
+      try {
+        const response = await fetch(
+          `http://${discoveredHost}:${discoveredPort}/drag-and-drop`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(args),
+          }
+        );
+
+        const result = await response.json();
+
+        if (response.ok) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: result.message || "Drag and drop completed successfully",
+              },
+            ],
+          };
+        } else {
+          return {
+            content: [
+              {
+                type: "text",
+                text: `Error with drag and drop: ${result.error}`,
+              },
+            ],
+          };
+        }
+      } catch (error: any) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Failed to perform drag and drop: ${error.message}`,
+            },
+          ],
+        };
+      }
+    });
+  }
+);
+
+// Enhanced Navigation Tools
+server.tool(
+  "navigateToUrl",
+  "Navigate to a specific URL with load waiting",
+  {
+    url: z.string().describe("URL to navigate to"),
+    waitForLoad: z.boolean().optional().default(true).describe("Whether to wait for page load completion"),
+    timeout: z.number().optional().default(30000).describe("Timeout in milliseconds")
+  },
+  async (args) => {
+    return await withServerConnection(async () => {
+      try {
+        const response = await fetch(
+          `http://${discoveredHost}:${discoveredPort}/navigate-to-url`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(args),
+          }
+        );
+
+        const result = await response.json();
+
+        if (response.ok) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: result.message || "Navigation completed successfully",
+              },
+            ],
+          };
+        } else {
+          return {
+            content: [
+              {
+                type: "text",
+                text: `Error navigating to URL: ${result.error}`,
+              },
+            ],
+          };
+        }
+      } catch (error: any) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Failed to navigate to URL: ${error.message}`,
+            },
+          ],
+        };
+      }
+    });
+  }
+);
+
+server.tool(
+  "navigateBack",
+  "Navigate back in browser history",
+  {},
+  async () => {
+    return await withServerConnection(async () => {
+      try {
+        const response = await fetch(
+          `http://${discoveredHost}:${discoveredPort}/navigate-back`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        const result = await response.json();
+
+        if (response.ok) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: result.message || "Navigated back successfully",
+              },
+            ],
+          };
+        } else {
+          return {
+            content: [
+              {
+                type: "text",
+                text: `Error navigating back: ${result.error}`,
+              },
+            ],
+          };
+        }
+      } catch (error: any) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Failed to navigate back: ${error.message}`,
+            },
+          ],
+        };
+      }
+    });
+  }
+);
+
+server.tool(
+  "navigateForward",
+  "Navigate forward in browser history",
+  {},
+  async () => {
+    return await withServerConnection(async () => {
+      try {
+        const response = await fetch(
+          `http://${discoveredHost}:${discoveredPort}/navigate-forward`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        const result = await response.json();
+
+        if (response.ok) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: result.message || "Navigated forward successfully",
+              },
+            ],
+          };
+        } else {
+          return {
+            content: [
+              {
+                type: "text",
+                text: `Error navigating forward: ${result.error}`,
+              },
+            ],
+          };
+        }
+      } catch (error: any) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Failed to navigate forward: ${error.message}`,
+            },
+          ],
+        };
+      }
+    });
+  }
+);
+
+server.tool(
+  "scrollToElement",
+  "Scroll to make element visible",
+  {
+    selector: z.string().describe("CSS selector for the element to scroll to"),
+    behavior: z.enum(["smooth", "instant"]).optional().default("smooth").describe("Scroll behavior: 'smooth' or 'instant'"),
+    block: z.enum(["start", "center", "end", "nearest"]).optional().default("start").describe("Vertical alignment: 'start', 'center', 'end', or 'nearest'"),
+    inline: z.enum(["start", "center", "end", "nearest"]).optional().default("nearest").describe("Horizontal alignment: 'start', 'center', 'end', or 'nearest'")
+  },
+  async (args) => {
+    return await withServerConnection(async () => {
+      try {
+        const response = await fetch(
+          `http://${discoveredHost}:${discoveredPort}/scroll-to-element`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(args),
+          }
+        );
+
+        const result = await response.json();
+
+        if (response.ok) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: result.message || "Scrolled to element successfully",
+              },
+            ],
+          };
+        } else {
+          return {
+            content: [
+              {
+                type: "text",
+                text: `Error scrolling to element: ${result.error}`,
+              },
+            ],
+          };
+        }
+      } catch (error: any) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Failed to scroll to element: ${error.message}`,
+            },
+          ],
+        };
+      }
+    });
+  }
+);
+
+server.tool(
+  "waitForElement",
+  "Wait for element to appear",
+  {
+    selector: z.string().describe("CSS selector for the element to wait for"),
+    timeout: z.number().optional().default(10000).describe("Timeout in milliseconds (default: 10000)"),
+    visible: z.boolean().optional().default(true).describe("Whether to wait for element to be visible (default: true)")
+  },
+  async (args) => {
+    return await withServerConnection(async () => {
+      try {
+        const response = await fetch(
+          `http://${discoveredHost}:${discoveredPort}/wait-for-element`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(args),
+          }
+        );
+
+        const result = await response.json();
+
+        if (response.ok) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: result.message || "Element found successfully",
+              },
+            ],
+          };
+        } else {
+          return {
+            content: [
+              {
+                type: "text",
+                text: `Error waiting for element: ${result.error}`,
+              },
+            ],
+          };
+        }
+      } catch (error: any) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Failed to wait for element: ${error.message}`,
+            },
+          ],
+        };
+      }
+    });
+  }
+);
+
 server.tool(
   "runBestPracticesAudit",
   "Run a best practices audit on the current page",

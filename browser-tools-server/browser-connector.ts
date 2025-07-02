@@ -644,6 +644,9 @@ export class BrowserConnector {
     // Set up Best Practices audit endpoint
     this.setupBestPracticesAudit();
 
+    // Set up browser automation endpoints
+    this.setupBrowserAutomationEndpoints();
+
     // Handle upgrade requests for WebSocket
     this.server.on(
       "upgrade",
@@ -1293,6 +1296,291 @@ export class BrowserConnector {
         console.log("WebSocket server closed gracefully");
         resolve();
       });
+    });
+  }
+
+  // Sets up browser automation endpoints
+  private setupBrowserAutomationEndpoints() {
+    // Click element endpoint
+    this.app.post("/click-element", async (req: any, res: any) => {
+      try {
+        if (!this.activeConnection) {
+          return res.status(503).json({ error: "Chrome extension not connected" });
+        }
+
+        const { selector, x, y } = req.body;
+        if (!selector && (!x || !y)) {
+          return res.status(400).json({ error: "Either selector or coordinates (x, y) are required" });
+        }
+
+        const message = {
+          type: "click-element",
+          selector,
+          x,
+          y,
+          requestId: Date.now().toString()
+        };
+
+        this.activeConnection.send(JSON.stringify(message));
+        res.json({ message: "Click command sent to browser" });
+      } catch (error) {
+        res.status(500).json({ error: error instanceof Error ? error.message : String(error) });
+      }
+    });
+
+    // Input text endpoint
+    this.app.post("/input-text", async (req: any, res: any) => {
+      try {
+        if (!this.activeConnection) {
+          return res.status(503).json({ error: "Chrome extension not connected" });
+        }
+
+        const { selector, text, clearFirst = true } = req.body;
+        if (!selector || text === undefined) {
+          return res.status(400).json({ error: "Selector and text are required" });
+        }
+
+        const message = {
+          type: "input-text",
+          selector,
+          text,
+          clearFirst,
+          requestId: Date.now().toString()
+        };
+
+        this.activeConnection.send(JSON.stringify(message));
+        res.json({ message: "Input text command sent to browser" });
+      } catch (error) {
+        res.status(500).json({ error: error instanceof Error ? error.message : String(error) });
+      }
+    });
+
+    // Select dropdown endpoint
+    this.app.post("/select-dropdown", async (req: any, res: any) => {
+      try {
+        if (!this.activeConnection) {
+          return res.status(503).json({ error: "Chrome extension not connected" });
+        }
+
+        const { selector, option, byValue = false } = req.body;
+        if (!selector || option === undefined) {
+          return res.status(400).json({ error: "Selector and option are required" });
+        }
+
+        const message = {
+          type: "select-dropdown",
+          selector,
+          option,
+          byValue,
+          requestId: Date.now().toString()
+        };
+
+        this.activeConnection.send(JSON.stringify(message));
+        res.json({ message: "Select dropdown command sent to browser" });
+      } catch (error) {
+        res.status(500).json({ error: error instanceof Error ? error.message : String(error) });
+      }
+    });
+
+    // Upload file endpoint
+    this.app.post("/upload-file", async (req: any, res: any) => {
+      try {
+        if (!this.activeConnection) {
+          return res.status(503).json({ error: "Chrome extension not connected" });
+        }
+
+        const { selector, filePath } = req.body;
+        if (!selector || !filePath) {
+          return res.status(400).json({ error: "Selector and filePath are required" });
+        }
+
+        const message = {
+          type: "upload-file",
+          selector,
+          filePath,
+          requestId: Date.now().toString()
+        };
+
+        this.activeConnection.send(JSON.stringify(message));
+        res.json({ message: "Upload file command sent to browser" });
+      } catch (error) {
+        res.status(500).json({ error: error instanceof Error ? error.message : String(error) });
+      }
+    });
+
+    // Hover element endpoint
+    this.app.post("/hover-element", async (req: any, res: any) => {
+      try {
+        if (!this.activeConnection) {
+          return res.status(503).json({ error: "Chrome extension not connected" });
+        }
+
+        const { selector } = req.body;
+        if (!selector) {
+          return res.status(400).json({ error: "Selector is required" });
+        }
+
+        const message = {
+          type: "hover-element",
+          selector,
+          requestId: Date.now().toString()
+        };
+
+        this.activeConnection.send(JSON.stringify(message));
+        res.json({ message: "Hover element command sent to browser" });
+      } catch (error) {
+        res.status(500).json({ error: error instanceof Error ? error.message : String(error) });
+      }
+    });
+
+    // Drag and drop endpoint
+    this.app.post("/drag-and-drop", async (req: any, res: any) => {
+      try {
+        if (!this.activeConnection) {
+          return res.status(503).json({ error: "Chrome extension not connected" });
+        }
+
+        const { sourceSelector, targetSelector, sourceX, sourceY, targetX, targetY } = req.body;
+        if (!sourceSelector || !targetSelector) {
+          return res.status(400).json({ error: "Source and target selectors are required" });
+        }
+
+        const message = {
+          type: "drag-and-drop",
+          sourceSelector,
+          targetSelector,
+          sourceX,
+          sourceY,
+          targetX,
+          targetY,
+          requestId: Date.now().toString()
+        };
+
+        this.activeConnection.send(JSON.stringify(message));
+        res.json({ message: "Drag and drop command sent to browser" });
+      } catch (error) {
+        res.status(500).json({ error: error instanceof Error ? error.message : String(error) });
+      }
+    });
+
+    // Navigate to URL endpoint
+    this.app.post("/navigate-to-url", async (req: any, res: any) => {
+      try {
+        if (!this.activeConnection) {
+          return res.status(503).json({ error: "Chrome extension not connected" });
+        }
+
+        const { url, waitForLoad = true, timeout = 30000 } = req.body;
+        if (!url) {
+          return res.status(400).json({ error: "URL is required" });
+        }
+
+        const message = {
+          type: "navigate-to-url",
+          url,
+          waitForLoad,
+          timeout,
+          requestId: Date.now().toString()
+        };
+
+        this.activeConnection.send(JSON.stringify(message));
+        res.json({ message: "Navigate to URL command sent to browser" });
+      } catch (error) {
+        res.status(500).json({ error: error instanceof Error ? error.message : String(error) });
+      }
+    });
+
+    // Navigate back endpoint
+    this.app.post("/navigate-back", async (req: any, res: any) => {
+      try {
+        if (!this.activeConnection) {
+          return res.status(503).json({ error: "Chrome extension not connected" });
+        }
+
+        const message = {
+          type: "navigate-back",
+          requestId: Date.now().toString()
+        };
+
+        this.activeConnection.send(JSON.stringify(message));
+        res.json({ message: "Navigate back command sent to browser" });
+      } catch (error) {
+        res.status(500).json({ error: error instanceof Error ? error.message : String(error) });
+      }
+    });
+
+    // Navigate forward endpoint
+    this.app.post("/navigate-forward", async (req: any, res: any) => {
+      try {
+        if (!this.activeConnection) {
+          return res.status(503).json({ error: "Chrome extension not connected" });
+        }
+
+        const message = {
+          type: "navigate-forward",
+          requestId: Date.now().toString()
+        };
+
+        this.activeConnection.send(JSON.stringify(message));
+        res.json({ message: "Navigate forward command sent to browser" });
+      } catch (error) {
+        res.status(500).json({ error: error instanceof Error ? error.message : String(error) });
+      }
+    });
+
+    // Scroll to element endpoint
+    this.app.post("/scroll-to-element", async (req: any, res: any) => {
+      try {
+        if (!this.activeConnection) {
+          return res.status(503).json({ error: "Chrome extension not connected" });
+        }
+
+        const { selector, behavior = "smooth", block = "start", inline = "nearest" } = req.body;
+        if (!selector) {
+          return res.status(400).json({ error: "Selector is required" });
+        }
+
+        const message = {
+          type: "scroll-to-element",
+          selector,
+          behavior,
+          block,
+          inline,
+          requestId: Date.now().toString()
+        };
+
+        this.activeConnection.send(JSON.stringify(message));
+        res.json({ message: "Scroll to element command sent to browser" });
+      } catch (error) {
+        res.status(500).json({ error: error instanceof Error ? error.message : String(error) });
+      }
+    });
+
+    // Wait for element endpoint
+    this.app.post("/wait-for-element", async (req: any, res: any) => {
+      try {
+        if (!this.activeConnection) {
+          return res.status(503).json({ error: "Chrome extension not connected" });
+        }
+
+        const { selector, timeout = 10000, visible = true } = req.body;
+        if (!selector) {
+          return res.status(400).json({ error: "Selector is required" });
+        }
+
+        const message = {
+          type: "wait-for-element",
+          selector,
+          timeout,
+          visible,
+          requestId: Date.now().toString()
+        };
+
+        this.activeConnection.send(JSON.stringify(message));
+        res.json({ message: "Wait for element command sent to browser" });
+      } catch (error) {
+        res.status(500).json({ error: error instanceof Error ? error.message : String(error) });
+      }
     });
   }
 
