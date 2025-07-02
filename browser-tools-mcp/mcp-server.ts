@@ -264,14 +264,23 @@ server.tool(
         const result = await response.json();
 
         if (response.ok) {
-          return {
-            content: [
-              {
-                type: "text",
-                text: "Successfully saved screenshot",
-              },
-            ],
-          };
+          const content = [
+            {
+              type: "text",
+              text: `Successfully saved screenshot to: ${result.path}`,
+            },
+          ];
+          
+          // Add image content if base64 data is available
+          if (result.base64Data) {
+            content.push({
+              type: "image",
+              data: result.base64Data,
+              mimeType: result.mimeType || "image/png",
+            } as any);
+          }
+          
+          return { content };
         } else {
           return {
             content: [

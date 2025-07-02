@@ -1234,6 +1234,8 @@ export class BrowserConnector {
       res.json({
         path: fullPath,
         filename: filename,
+        base64Data: cleanBase64,
+        mimeType: "image/png",
       });
     } catch (error) {
       const errorMessage =
